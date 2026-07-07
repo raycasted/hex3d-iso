@@ -17,7 +17,11 @@
 #endif
 
 // TODO: Define your custom data types here
-
+enum Scenes{
+    RAYLIB_INTRO = 0,
+    TITLE = 1,
+    GAME = 2
+};
 //----------------------------------------------------------------------------------
 // Global Variables Definition (local to this module)
 //----------------------------------------------------------------------------------
@@ -28,14 +32,15 @@ static RenderTexture2D target = { 0 };  // Render texture to render our game
 static int frameCounter = 0;
 
 // TODO: Define global variables here, recommended to make them static
-
+static enum Scenes sceneIndex = RAYLIB_INTRO;
 static void UpdateDrawFrame(void);      // Update and Draw one frame
+static void DrawCubert(Vector2 pos, float radius, Color color1, Color color2, Color color3); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me)
 
+float raylibFade = 0.0f; // this is for the raylib logo
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
-int main(void)
-{
+int main(void){
 #if !defined(_DEBUG)
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messages
 #endif
@@ -80,8 +85,6 @@ void UpdateDrawFrame(void)
 {
     // Update
     //----------------------------------------------------------------------------------
-    // TODO: Update variables / Implement example logic at this point
-   
     frameCounter++;
 
     // Draw
@@ -89,24 +92,42 @@ void UpdateDrawFrame(void)
     // Render game screen to a texture, 
     // it could be useful for scaling or further shader postprocessing
     BeginTextureMode(target);
-        ClearBackground(RAYWHITE);
-        
-        // TODO: Draw your game screen here
+        switch (sceneIndex) {
+            case RAYLIB_INTRO:
+                ClearBackground(RAYWHITE);
+                DrawRectangle(screenWidth/2 - 128, screenHeight/2 - 128, 256, 256, BLACK);
+                DrawRectangle(screenWidth/2 - 112, screenHeight/2 - 112, 224, 224, RAYWHITE);
+                DrawText("raylib", screenWidth/2 - 44, screenHeight/2 + 48, 50, BLACK);
+                DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0,0,0,raylibFade});
+                if(frameCounter >= 120){ 
+                    raylibFade += 5.0f;
+                }
+                if(raylibFade >= 255.0f || IsKeyPressed(KEY_ENTER)){
+                    frameCounter = 0;
+                    sceneIndex = TITLE;
+                }
+                break;
+            case TITLE:
+                ClearBackground(BLACK);
+                DrawRectangle(screenWidth/2 - 240/2, screenHeight/2 + 240, 240, 60, GREEN);
+                DrawText("Play!", screenWidth/2 - 240/2 + 64, screenHeight/2 + 240 + 8, 48, WHITE);
+                if(CheckCollisionPointRec(GetMousePosition(), (Rectangle){(float)screenWidth/2 - (float)240/2, (float)screenHeight/2 + 240, 240, 60})){
+                    // on hover
+                    if(IsMouseButtonDown(MOUSE_LEFT_BUTTON)){
+                        // on click
+                        frameCounter = 0;
+                        sceneIndex = GAME;
+                    }
+                }
+                break;
+            case GAME:
+                ClearBackground(BLACK);
+                DrawCubert((Vector2){(float)screenWidth/2, (float)screenHeight/2}, 32, BLUE, GRAY, BLACK);
+            default:
+                break;
+        }
 
-        DrawRectangle(70, 90, 200, 200, BLACK);
-        DrawRectangle(70 + 16, 90 + 16, 200 - 32, 200 - 32, RAYWHITE);
-        DrawText("raylib", 70 + 200 - MeasureText("raylib", 40) - 32, 90 + 200 - 40 - 24, 40, BLACK);
-
-        DrawText("6.x", 290, 90 - 26, 280, BLACK);
-        DrawText("GAMEJAM", 70, 90 + 210, 120, MAROON);
-
-        if ((frameCounter/20)%2) DrawText("are you ready?", 160, 500, 50, BLACK);
-        
-        DrawRectangleLinesEx((Rectangle){ 0, 0, screenWidth, screenHeight }, 16, BLACK);
-        
     EndTextureMode();
-    
-    // Render to screen (main framebuffer)
     BeginDrawing();
         ClearBackground(RAYWHITE);
         
@@ -117,4 +138,9 @@ void UpdateDrawFrame(void)
         // TODO: Draw everything that requires to be drawn at this point, maybe UI?
 
     EndDrawing();
+}
+static void DrawCubert(Vector2 pos, float radius, Color color1, Color color2, Color color3){
+    // TODO: implement this
+    DrawRectanglePro((Rectangle){pos.x, pos.y, radius- 8 , radius-8}, (Vector2){0,0}, 45.0f, color1);
+    
 }
