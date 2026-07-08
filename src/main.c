@@ -209,28 +209,28 @@ void UpdateDrawFrame(void)
                 }
                 DrawTextureRec(playerTex, playerRec, playerPos, WHITE);
                 if(IsKeyDown(KEY_RIGHT)){
-                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
                 }else{
-                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
                 }
                 if(IsKeyDown(KEY_DOWN)){
-                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
                 }else{
-                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
                 }
                 if(IsKeyDown(KEY_LEFT)){
-                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
                 }else{
-                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64, screenHeight - 128}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
                 }
                 if(IsKeyDown(KEY_UP)){
-                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2, screenHeight - 192}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
                 }else{
-                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2, screenHeight - 192}, WHITE);
+                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
                 }
                 
                 BeginShaderMode(shader);
-                DrawText("CONTROLS", screenWidth/2 - 32, screenHeight/2 + 300, 24, WHITE);
+                DrawText("CONTROLS", screenWidth/2 - 64, screenHeight/2 + 300, 24, WHITE);
                 EndShaderMode();
             default:
                 break;
