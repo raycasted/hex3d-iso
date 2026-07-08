@@ -22,6 +22,13 @@ enum Scenes{
     TITLE = 1,
     GAME = 2
 };
+enum Directions{
+    TOP_LEFT = 448,
+    TOP_RIGHT = 256,
+    BOTTOM_LEFT = 384,
+    BOTTOM_RIGHT = 640,
+    IDLE = 320
+};
 //----------------------------------------------------------------------------------
 // Global Variables Definition (local to this module)
 //----------------------------------------------------------------------------------
@@ -34,9 +41,18 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static enum Scenes sceneIndex = RAYLIB_INTRO;
 static void UpdateDrawFrame(void);      // Update and Draw one frame
-static void DrawCubert(Vector2 pos, float radius, Color color1, Color color2, Color color3); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me)
-
+static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me)
+static void DrawMap();
 float raylibFade = 0.0f; // this is for the raylib logo
+
+// colors:
+Color topPlatformColor = BLUE;
+Color leftPlatformColor = WHITE;
+Color rightPlatformColor = GRAY;
+
+Texture2D playerTex;
+Rectangle playerRec;
+Vector2 playerPos = (Vector2){(float)screenWidth/2 - 32, 128 - 84};
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -48,7 +64,8 @@ int main(void){
     InitWindow(screenWidth, screenHeight, "raylib gamejam template");
     
     // TODO: Load resources / Initialize variables at this point
-    
+    playerTex = LoadTexture("resources/plr.png");
+    playerRec = (Rectangle){IDLE, 0, (float)playerTex.width/12, (float)playerTex.height};
     // Render texture to draw, enables screen scaling
     // NOTE: If screen is scaled, mouse input should be scaled proportionally
     target = LoadRenderTexture(screenWidth, screenHeight);
@@ -122,7 +139,8 @@ void UpdateDrawFrame(void)
                 break;
             case GAME:
                 ClearBackground(BLACK);
-                DrawCubert((Vector2){(float)screenWidth/2, (float)screenHeight/2}, 32, BLUE, GRAY, BLACK);
+                DrawMap();
+                DrawTextureRec(playerTex, playerRec, playerPos, WHITE);
             default:
                 break;
         }
@@ -139,8 +157,73 @@ void UpdateDrawFrame(void)
 
     EndDrawing();
 }
-static void DrawCubert(Vector2 pos, float radius, Color color1, Color color2, Color color3){
-    // TODO: implement this
-    DrawRectanglePro((Rectangle){pos.x, pos.y, radius- 8 , radius-8}, (Vector2){0,0}, 45.0f, color1);
+// ugly code goes here!!
+static void DrawMap(){
+    DrawCubert((Vector2){(float)screenWidth/2, 128}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    // LEFT ROW
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 48}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*2, 128 + 48*2}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*3, 128 + 48*3}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*4, 128 + 48*4}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*5, 128 + 48*5}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*6, 128 + 48*6}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
     
+    // RIGHT ROW
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 48}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*2, 128 + 48*2}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*3, 128 + 48*3}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*4, 128 + 48*4}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*5, 128 + 48*5}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*6, 128 + 48*6}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    // MIDDLE
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 96}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 144}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 144}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    DrawCubert((Vector2){(float)screenWidth/2 + 96, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 96, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+    DrawCubert((Vector2){(float)screenWidth/2 - 128, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    DrawCubert((Vector2){(float)screenWidth/2 + 128, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+
+
+
+
+}
+static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right)
+{
+    float vRadius = radius * 0.5f; // isometric squash for the top diamond
+
+    Vector2 topPt   = { pos.x,          pos.y - vRadius };
+    Vector2 rightPt = { pos.x + radius, pos.y };
+    Vector2 botPt   = { pos.x,          pos.y + vRadius };
+    Vector2 leftPt  = { pos.x - radius, pos.y };
+
+    Vector2 leftDown  = { leftPt.x,  leftPt.y  + height };
+    Vector2 botDown   = { botPt.x,   botPt.y   + height };
+    Vector2 rightDown = { rightPt.x, rightPt.y + height };
+
+    // Left face
+    DrawTriangle(leftPt, leftDown, botDown, left);
+    DrawTriangle(leftPt, botDown, botPt, left);
+
+    // Right face
+    DrawTriangle(botPt, botDown, rightDown, right);
+    DrawTriangle(botPt, rightDown, rightPt, right);
+
+    // Top face (draw last so it sits "in front")
+    DrawTriangle(topPt, leftPt, botPt, top);
+    DrawTriangle(topPt, botPt, rightPt, top);
 }
