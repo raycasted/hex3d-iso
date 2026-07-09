@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raymath.h"
 #if defined(PLATFORM_DESKTOP)
     #define GLSL_VERSION            330
 #else   // PLATFORM_ANDROID, PLATFORM_WEB
@@ -30,8 +31,7 @@ enum Directions{
     TOP_LEFT = 448,
     TOP_RIGHT = 256,
     BOTTOM_LEFT = 384,
-    BOTTOM_RIGHT = 640,
-    IDLE = 320
+    BOTTOM_RIGHT = 320,
 };
 enum Keys{
     UP_TOP_RIGHT = 0,
@@ -56,6 +56,7 @@ static int frameCounter = 0;
 static enum Scenes sceneIndex = RAYLIB_INTRO;
 static void UpdateDrawFrame(void);      // Update and Draw one frame
 static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me)
+static Vector2 CheckCubertCollision(Vector2 playerPos); // returns {-1, -1} on no block collision
 static void DrawMap();
 float raylibFade = 0.0f; // this is for the raylib logo
 float seconds = 0.0f;
@@ -70,6 +71,11 @@ Texture2D playerTex;
 Texture2D keysTex;
 Rectangle playerRec;
 Vector2 playerPos = (Vector2){(float)screenWidth/2 - 32, 128 - 84};
+bool canMove = true;
+
+#define BLOCK_COUNT 28
+static Vector2 blockPositions[BLOCK_COUNT];
+static Color blockColors[BLOCK_COUNT];
 
 Shader shader;
 //------------------------------------------------------------------------------------
@@ -85,7 +91,7 @@ int main(void){
     // TODO: Load resources / Initialize variables at this point
     playerTex = LoadTexture("resources/plr.png");
     keysTex = LoadTexture("resources/keys.png");
-    playerRec = (Rectangle){IDLE, 0, (float)playerTex.width/12, (float)playerTex.height};
+    playerRec = (Rectangle){BOTTOM_RIGHT, 0, (float)playerTex.width/12, (float)playerTex.height};
     shader = LoadShader(0, TextFormat("resources/wave100.fs", GLSL_VERSION));
     secondsLoc = GetShaderLocation(shader, "seconds");
     int freqXLoc = GetShaderLocation(shader, "freqX");
@@ -115,6 +121,47 @@ int main(void){
     target = LoadRenderTexture(screenWidth, screenHeight);
     SetTextureFilter(target.texture, TEXTURE_FILTER_BILINEAR);
 
+
+    int n = 0;
+    blockPositions[n++] = (Vector2){(float)screenWidth/2, 128};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32, 128 + 48};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32*2, 128 + 48*2};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32*3, 128 + 48*3};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32*4, 128 + 48*4};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32*5, 128 + 48*5};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32*6, 128 + 48*6};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32, 128 + 48};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32*2, 128 + 48*2};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32*3, 128 + 48*3};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32*4, 128 + 48*4};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32*5, 128 + 48*5};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32*6, 128 + 48*6};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2, 128 + 96};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32, 128 + 144};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32, 128 + 144};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2, 128 + 192};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 64, 128 + 192};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 64, 128 + 192};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 96, 128 + 240};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 32, 128 + 240};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 32, 128 + 240};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 96, 128 + 240};
+
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 128, 128 + 288};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2, 128 + 288};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 - 64, 128 + 288};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 64, 128 + 288};
+    blockPositions[n++] = (Vector2){(float)screenWidth/2 + 128, 128 + 288};
+    for(int i = 0; i < BLOCK_COUNT; i++){
+        blockColors[i] = topPlatformColor;
+    }
+
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
 #else
@@ -130,7 +177,9 @@ int main(void){
     // De-Initialization
     //--------------------------------------------------------------------------------------
     UnloadRenderTexture(target);
-    
+    UnloadTexture(playerTex);
+    UnloadTexture(keysTex);
+    UnloadShader(shader);
     // TODO: Unload all loaded resources at this point
 
     CloseWindow();
@@ -148,6 +197,7 @@ void UpdateDrawFrame(void)
     //----------------------------------------------------------------------------------
     frameCounter++;
     seconds += GetFrameTime();
+    if(seconds >= 1.6) seconds = 0;
     SetShaderValue(shader, secondsLoc, &seconds, SHADER_UNIFORM_FLOAT);
     // Draw
     //----------------------------------------------------------------------------------
@@ -177,7 +227,7 @@ void UpdateDrawFrame(void)
                 int fontSize = 48;
                 int textWidth = MeasureText(text, fontSize);
 
-                int textStartX = GetScreenWidth()/2 - textWidth / 2;\
+                int textStartX = GetScreenWidth()/2 - textWidth / 2;
                 BeginShaderMode(shader);
                     DrawText(text, textStartX, screenHeight/2 + 240 + 8, fontSize, WHITE);
                 EndShaderMode();
@@ -190,48 +240,64 @@ void UpdateDrawFrame(void)
             case GAME:
                 ClearBackground(BLACK);
                 DrawMap();
-                if(IsKeyPressed(KEY_RIGHT)){
+                Vector2 currentBlock = CheckCubertCollision(playerPos);
+                if(currentBlock.x != -1) DrawCubert(currentBlock, 32, 32, YELLOW, leftPlatformColor, rightPlatformColor);
+                if(IsKeyPressed(KEY_RIGHT) && canMove){
+                    playerRec.x = BOTTOM_RIGHT;
                     playerPos.x += 32;
                     playerPos.y += 48;
                 }
-                if(IsKeyPressed(KEY_LEFT)){
+                if(IsKeyPressed(KEY_LEFT) && canMove){
+                    playerRec.x = TOP_LEFT;
                     playerPos.x -= 32;
                     playerPos.y -= 48;
                 }
-                if(IsKeyPressed(KEY_DOWN)){
+                if(IsKeyPressed(KEY_DOWN) && canMove){
+                    playerRec.x = BOTTOM_LEFT;
                     playerPos.x -= 32;
                     playerPos.y += 48;
                     
                 }
-                if(IsKeyPressed(KEY_UP)){
+                if(IsKeyPressed(KEY_UP) && canMove){
+                    playerRec.x = TOP_RIGHT;
                     playerPos.x += 32;
                     playerPos.y -= 48;
                 }
                 DrawTextureRec(playerTex, playerRec, playerPos, WHITE);
-                if(IsKeyDown(KEY_RIGHT)){
-                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
+
+                if(CheckCubertCollision(playerPos).x == -1){
+                    if(canMove) frameCounter = 0;
+                    canMove = false;
+                    if(frameCounter >= 120){
+                        playerPos.y += 5;
+                        if(frameCounter%20 == 0) playerRec.width *= -1;
+                    }
                 }else{
-                    DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
-                }
-                if(IsKeyDown(KEY_DOWN)){
-                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
-                }else{
-                    DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
-                }
-                if(IsKeyDown(KEY_LEFT)){
-                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
-                }else{
-                    DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
-                }
-                if(IsKeyDown(KEY_UP)){
-                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
-                }else{
-                    DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
+                    if(IsKeyDown(KEY_RIGHT)){
+                        DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
+                    }else{
+                        DrawTextureRec(keysTex, (Rectangle){RIGHT_BOTTOM_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 + 64 - 28, screenHeight - 128}, WHITE);
+                    }
+                    if(IsKeyDown(KEY_DOWN)){
+                        DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
+                    }else{
+                        DrawTextureRec(keysTex, (Rectangle){DOWN_BOTTOM_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 128}, WHITE);
+                    }
+                    if(IsKeyDown(KEY_LEFT)){
+                        DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
+                    }else{
+                        DrawTextureRec(keysTex, (Rectangle){LEFT_TOP_LEFT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 64 - 28, screenHeight - 128}, WHITE);
+                    }
+                    if(IsKeyDown(KEY_UP)){
+                        DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT_PRESSED, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
+                    }else{
+                        DrawTextureRec(keysTex, (Rectangle){UP_TOP_RIGHT, 0, (float)keysTex.width/8, keysTex.height}, (Vector2){(float)screenWidth/2 - 28, screenHeight - 192}, WHITE);
+                    }
+                    BeginShaderMode(shader);
+                    DrawText("CONTROLS", screenWidth/2 - 64, screenHeight/2 + 300, 24, WHITE);
+                    EndShaderMode();
                 }
                 
-                BeginShaderMode(shader);
-                DrawText("CONTROLS", screenWidth/2 - 64, screenHeight/2 + 300, 24, WHITE);
-                EndShaderMode();
             default:
                 break;
         }
@@ -250,48 +316,83 @@ void UpdateDrawFrame(void)
 }
 // ugly code goes here!!
 static void DrawMap(){
-    DrawCubert((Vector2){(float)screenWidth/2, 128}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-
+    
+    int n = 0;
+    Vector2 block = CheckCubertCollision(playerPos);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2, 128}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
     // LEFT ROW
-    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 48}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32*2, 128 + 48*2}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32*3, 128 + 48*3}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32*4, 128 + 48*4}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32*5, 128 + 48*5}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32*6, 128 + 48*6}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 48}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*2, 128 + 48*2}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*3, 128 + 48*3}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*4, 128 + 48*4}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*5, 128 + 48*5}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32*6, 128 + 48*6}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
     
     // RIGHT ROW
-    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 48}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32*2, 128 + 48*2}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32*3, 128 + 48*3}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32*4, 128 + 48*4}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32*5, 128 + 48*5}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32*6, 128 + 48*6}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 48}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*2, 128 + 48*2}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*3, 128 + 48*3}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*4, 128 + 48*4}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*5, 128 + 48*5}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32*6, 128 + 48*6}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
     // MIDDLE
-    DrawCubert((Vector2){(float)screenWidth/2, 128 + 96}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 96}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 144}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 144}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 144}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 144}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    DrawCubert((Vector2){(float)screenWidth/2, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 192}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    DrawCubert((Vector2){(float)screenWidth/2 + 96, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 96, 128 + 240}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 96, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 96, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    DrawCubert((Vector2){(float)screenWidth/2 - 128, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-    DrawCubert((Vector2){(float)screenWidth/2 + 128, 128 + 288}, 32, 32, topPlatformColor, leftPlatformColor, rightPlatformColor);
-
-
-
-
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 128, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    DrawCubert((Vector2){(float)screenWidth/2 + 128, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
+    for(int i = 0; i < BLOCK_COUNT; i++){
+        if(ColorIsEqual(blockColors[i], BLUE)){
+            break;
+        }
+        // WIN
+        playerRec.width *= -1;
+        // jump up an down
+        //playerRec.y -= 0.1;
+    }
 }
 static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right)
 {
@@ -317,4 +418,15 @@ static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color
     // Top face (draw last so it sits "in front")
     DrawTriangle(topPt, leftPt, botPt, top);
     DrawTriangle(topPt, botPt, rightPt, top);
+}
+static Vector2 CheckCubertCollision(Vector2 playerPos)
+{
+    Vector2 playerBlockPos = { playerPos.x + 32, playerPos.y + 84 };
+    for (int i = 0; i < BLOCK_COUNT; i++) {
+        if (fabsf(playerBlockPos.x - blockPositions[i].x) < 1.0f &&
+            fabsf(playerBlockPos.y - blockPositions[i].y) < 1.0f) {
+            return blockPositions[i];
+        }
+    }
+    return (Vector2){-1, -1};
 }
