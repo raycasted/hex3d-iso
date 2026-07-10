@@ -231,7 +231,6 @@ void UpdateDrawFrame(void)
     // Render game screen to a texture, 
     // it could be useful for scaling or further shader postprocessing
     BeginTextureMode(target);
-    DrawFPS(0, 0);
         switch (sceneIndex) {
             case RAYLIB_INTRO:
                 ClearBackground(RAYWHITE);
