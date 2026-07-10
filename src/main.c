@@ -72,6 +72,7 @@ Color rightPlatformColor = GRAY;
 // player
 Texture2D playerTex;
 Texture2D keysTex;
+Texture2D logo;
 Rectangle playerRec;
 Vector2 playerPos = (Vector2){(float)screenWidth/2 - 32, 128 - 84};
 bool canMove = true;
@@ -98,7 +99,7 @@ int main(void){
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messages
 #endif
     // Initialization
-    InitWindow(screenWidth, screenHeight, "raylib gamejam template");
+    InitWindow(screenWidth, screenHeight, "HEX3D ISO");
     InitAudioDevice();
     
     // TODO: Load resources / Initialize variables at this point
@@ -111,6 +112,9 @@ int main(void){
     bgm = LoadMusicStream("resources/bgm.wav");
     raylibIntro = LoadSound("resources/raylibsfx.wav");
     title = LoadMusicStream("resources/title.wav");
+    logo = LoadTexture("resources/promotional-hexed-iso.png");
+    logo.width = 600;
+    logo.height = 600;
 
     secondsLoc = GetShaderLocation(shader, "seconds");
     int freqXLoc = GetShaderLocation(shader, "freqX");
@@ -202,6 +206,7 @@ int main(void){
     UnloadSound(win);
     UnloadMusicStream(bgm);
     UnloadMusicStream(title);
+    UnloadTexture(logo);
     // TODO: Unload all loaded resources at this point
 
     CloseWindow();
@@ -247,13 +252,15 @@ void UpdateDrawFrame(void)
             case TITLE:
                 UpdateMusicStream(title);
                 ClearBackground(BLACK);
+                
                 const char* text = "PRESS ENTER";
 
-                int fontSize = 48;
+                int fontSize = 32;
                 int textWidth = MeasureText(text, fontSize);
 
                 int textStartX = GetScreenWidth()/2 - textWidth / 2;
                 BeginShaderMode(shader);
+                    DrawTexture(logo, screenWidth/2 - 300, 100, WHITE);
                     DrawText(text, textStartX, screenHeight/2 + 240 + 8, fontSize, WHITE);
                 EndShaderMode();
                 if(IsKeyPressed(KEY_ENTER)){

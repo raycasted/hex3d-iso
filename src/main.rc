@@ -9,13 +9,13 @@ BEGIN
     //BLOCK "080904E4"     // English UK
     BLOCK "040904E4"    // English US
     BEGIN
-      VALUE "CompanyName", "raylib technologies"
-      VALUE "FileDescription", "raylib-game | A great game"
+      VALUE "CompanyName", "hdfsyu"
+      VALUE "FileDescription", "HEX3D ISO | raylib 6.x gamejam submission"
       VALUE "FileVersion", "1.0"
-      VALUE "InternalName", "raylib-game"
-      VALUE "LegalCopyright", "(c) 2025 raylib technologies (@raylibtech)"
+      VALUE "InternalName", "hexed-iso"
+      VALUE "LegalCopyright", "(c) 2026 hdfsyu (@raycasted on github)"
       //VALUE "OriginalFilename", "raylib_app.exe"
-      VALUE "ProductName", "raylib-game"
+      VALUE "ProductName", "hex3d-iso"
       VALUE "ProductVersion", "1.0"
     END
   END
