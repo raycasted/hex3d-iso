@@ -1,3 +1,4 @@
+// please, never remind me of the coding sins i have committed, and never remind me of this file. this is an embarassment to FOSS as a whole.
 #include "raylib.h"
 #include "raymath.h"
 #if defined(PLATFORM_DESKTOP)
@@ -55,7 +56,7 @@ static int frameCounter = 0;
 // TODO: Define global variables here, recommended to make them static
 static enum Scenes sceneIndex = RAYLIB_INTRO;
 static void UpdateDrawFrame(void);      // Update and Draw one frame
-static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me)
+static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right); // LMAOOO GET IT BECAUSE Q*BERT + CUBE = CUBERT AHAHHAHHAHAHAHAHAH (save me) (only thing thats ai coded**)
 static Vector2 CheckCubertCollision(Vector2 playerPos); // returns {-1, -1} on no block collision
 static void DrawMap();
 static void ResetGame(); // resets player, state, pos, enemies and randomizes color
@@ -74,6 +75,7 @@ Texture2D keysTex;
 Rectangle playerRec;
 Vector2 playerPos = (Vector2){(float)screenWidth/2 - 32, 128 - 84};
 bool canMove = true;
+bool hasWon = false;
 float recThickness = 0.0f;
 
 #define BLOCK_COUNT 28
@@ -82,6 +84,12 @@ static Color blockColors[BLOCK_COUNT];
 const Color topColorsPositive[4] = {GOLD, PINK, GREEN, BEIGE};
 const Color topColorsNegative[4] = {BLUE, PURPLE, DARKGREEN, ORANGE};
 Shader shader;
+
+Sound screenClose;
+Sound raylibIntro;
+Sound win;
+Music bgm;
+Music title;
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -91,12 +99,19 @@ int main(void){
 #endif
     // Initialization
     InitWindow(screenWidth, screenHeight, "raylib gamejam template");
+    InitAudioDevice();
     
     // TODO: Load resources / Initialize variables at this point
     playerTex = LoadTexture("resources/plr.png");
     keysTex = LoadTexture("resources/keys.png");
     playerRec = (Rectangle){BOTTOM_RIGHT, 0, (float)playerTex.width/12, (float)playerTex.height};
     shader = LoadShader(0, TextFormat("resources/wave100.fs", GLSL_VERSION));
+    screenClose = LoadSound("resources/screen_close_sfx.wav");
+    win = LoadSound("resources/win.wav");
+    bgm = LoadMusicStream("resources/bgm.wav");
+    raylibIntro = LoadSound("resources/raylibsfx.wav");
+    title = LoadMusicStream("resources/title.wav");
+
     secondsLoc = GetShaderLocation(shader, "seconds");
     int freqXLoc = GetShaderLocation(shader, "freqX");
     int freqYLoc = GetShaderLocation(shader, "freqY");
@@ -163,7 +178,7 @@ int main(void){
     blockPositions[n++] = (Vector2){(float)screenWidth/2 + 64, 128 + 288};
     blockPositions[n++] = (Vector2){(float)screenWidth/2 + 128, 128 + 288};
     
-
+    PlaySound(raylibIntro);
 #if defined(PLATFORM_WEB)
     emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
 #else
@@ -182,6 +197,11 @@ int main(void){
     UnloadTexture(playerTex);
     UnloadTexture(keysTex);
     UnloadShader(shader);
+    UnloadSound(raylibIntro);
+    UnloadSound(screenClose);
+    UnloadSound(win);
+    UnloadMusicStream(bgm);
+    UnloadMusicStream(title);
     // TODO: Unload all loaded resources at this point
 
     CloseWindow();
@@ -214,15 +234,18 @@ void UpdateDrawFrame(void)
                 DrawRectangle(screenWidth/2 - 112, screenHeight/2 - 112, 224, 224, RAYWHITE);
                 DrawText("raylib", screenWidth/2 - 44, screenHeight/2 + 48, 50, BLACK);
                 DrawRectangle(0, 0, screenWidth, screenHeight, (Color){0,0,0,raylibFade});
+                
                 if(frameCounter >= 120){
                     raylibFade += 5.0f;
                 }
                 if(raylibFade >= 255.0f || IsKeyPressed(KEY_ENTER)){
                     frameCounter = 0;
                     sceneIndex = TITLE;
+                    PlayMusicStream(title);
                 }
                 break;
             case TITLE:
+                UpdateMusicStream(title);
                 ClearBackground(BLACK);
                 const char* text = "PRESS ENTER";
 
@@ -238,13 +261,15 @@ void UpdateDrawFrame(void)
                     frameCounter = 0;
                     ResetGame();
                     sceneIndex = GAME;
+                    PlayMusicStream(bgm);
                 }
                 break;
             case GAME:
+                UpdateMusicStream(bgm);
                 ClearBackground(BLACK);
                 DrawMap();
                 Vector2 currentBlock = CheckCubertCollision(playerPos);
-                if(currentBlock.x != -1) DrawCubert(currentBlock, 32, 32, YELLOW, leftPlatformColor, rightPlatformColor);
+                if(currentBlock.x != -1) DrawCubert(currentBlock, 32, 32, positiveColor, leftPlatformColor, rightPlatformColor);
                 if(IsKeyPressed(KEY_RIGHT) && canMove){
                     playerRec.x = BOTTOM_RIGHT;
                     playerPos.x += 32;
@@ -267,8 +292,8 @@ void UpdateDrawFrame(void)
                     playerPos.y -= 48;
                 }
                 DrawTextureRec(playerTex, playerRec, playerPos, WHITE);
-
                 if(CheckCubertCollision(playerPos).x == -1){
+                    StopMusicStream(bgm);
                     if(canMove) frameCounter = 0;
                     canMove = false;
                     if(frameCounter >= 120){
@@ -278,6 +303,7 @@ void UpdateDrawFrame(void)
                     if(playerPos.y > 1000){
                         recThickness += 5;
                         DrawRectangleLinesEx((Rectangle){0, 0, screenWidth, screenHeight}, recThickness, BLACK);
+                        if(playerPos.y <= 1100) PlaySound(screenClose);
                     }
                     if(playerPos.y > 2000){
                         int textWidth = MeasureText("GAME OVER!", 96);
@@ -295,7 +321,10 @@ void UpdateDrawFrame(void)
 
                         int textStartX = GetScreenWidth()/2 - textWidth / 2;
                         
-                            DrawText(text, textStartX, screenHeight/2 + 240 + 8, fontSize, WHITE);
+                        DrawText(text, textStartX, screenHeight/2 + 240 + 8, fontSize, WHITE);
+                        if(IsKeyPressed(KEY_ENTER)){
+                            ResetGame();
+                        }
                         
                     }
                 }else{
@@ -321,7 +350,55 @@ void UpdateDrawFrame(void)
                     }
                     BeginShaderMode(shader);
                     DrawText("CONTROLS", screenWidth/2 - 64, screenHeight/2 + 300, 24, WHITE);
+                    DrawText("POSITIVE COLOR", (float)screenWidth/2 - 320, screenHeight/2 + 300, 24, WHITE);
                     EndShaderMode();
+                    DrawCubert((Vector2){(float)screenWidth/2 - 224, screenHeight - 128}, 32, 32, positiveColor, leftPlatformColor, rightPlatformColor);
+                   
+                    
+                }
+                if(hasWon){
+                    StopMusicStream(bgm);
+                    if(frameCounter%20 == 0){
+                        for(int i = 0; i < BLOCK_COUNT; i++){
+                            if(ColorIsEqual(WHITE, blockColors[i])) blockColors[i] = positiveColor;
+                            else blockColors[i] = WHITE;
+                        }
+                    }
+                    if(frameCounter >= 120){
+                        recThickness += 2.5;
+                        DrawRectangleLinesEx((Rectangle){0, 0, screenWidth, screenHeight}, recThickness, BLACK);
+                        if(recThickness == 2.5){
+                            PlaySound(screenClose);
+                        }
+                    }
+                }
+                if(recThickness >= 720 && hasWon){
+                    if(recThickness <= 723) PlaySound(win);
+                    int textWidth = MeasureText("YOU WON!", 96);
+                        
+                    int textStartX = GetScreenWidth()/2 - textWidth / 2;
+                    BeginShaderMode(shader);
+                        DrawText("YOU WON!", textStartX, 96, 96, GOLD);
+                    EndShaderMode();
+                    const char* text = "PRESS ENTER TO PLAY AGAIN!";
+
+                    int fontSize = 42;
+                    int textWidth2 = MeasureText(text, fontSize);
+                    int textStartX2 = GetScreenWidth()/2 - textWidth2 / 2;
+                    
+                    DrawText(text, textStartX2, screenHeight/2 + 240 + 8, fontSize, WHITE);
+                    if(IsKeyPressed(KEY_ENTER)){
+                        ResetGame();
+                    }
+                }
+                for(int i = 0; i < BLOCK_COUNT; i++){
+                    if(ColorIsEqual(blockColors[i], negativeColor)){
+                        break;
+                    }
+                    if(i == BLOCK_COUNT - 1){
+                        canMove = false;
+                        hasWon = true;
+                    }
                 }
                 
             default:
@@ -345,80 +422,71 @@ static void DrawMap(){
     
     int n = 0;
     Vector2 block = CheckCubertCollision(playerPos);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2, 128}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
     // LEFT ROW
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 48}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32*2, 128 + 48*2}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32*3, 128 + 48*3}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32*4, 128 + 48*4}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32*5, 128 + 48*5}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32*6, 128 + 48*6}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
     
     // RIGHT ROW
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 48}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32*2, 128 + 48*2}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32*3, 128 + 48*3}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32*4, 128 + 48*4}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32*5, 128 + 48*5}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32*6, 128 + 48*6}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
     // MIDDLE
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2, 128 + 96}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 144}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 144}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 192}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 96, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 32, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 32, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 96, 128 + 240}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
 
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 128, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 - 64, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 64, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = YELLOW;
+    if(block.x == blockPositions[n].x && block.y == blockPositions[n].y) blockColors[n] = positiveColor;
     DrawCubert((Vector2){(float)screenWidth/2 + 128, 128 + 288}, 32, 32, blockColors[n++], leftPlatformColor, rightPlatformColor);
-    for(int i = 0; i < BLOCK_COUNT; i++){
-        if(ColorIsEqual(blockColors[i], BLUE)){
-            break;
-        }
-        // WIN
-        //playerRec.width *= -1;
-        // jump up an down
-        //playerRec.y -= 0.1;
-    }
 }
 static void DrawCubert(Vector2 pos, float radius, float height, Color top, Color left, Color right)
 {
@@ -464,4 +532,10 @@ static void ResetGame(){
     for(int i = 0; i < BLOCK_COUNT; i++){
         blockColors[i] = negativeColor;
     }
+    hasWon = false;
+    playerRec.x = BOTTOM_RIGHT;
+    canMove = true;
+    PlayMusicStream(bgm);
+    frameCounter = 0;
+    recThickness = 0.0f;
 }
